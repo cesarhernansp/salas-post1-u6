@@ -30,6 +30,12 @@ var_x    dw 0FFFFh
 tabla_hex db 30h, 31h, 32h, 33h, 34h, 35h, 36h, 37h
           db 38h, 39h, 41h, 42h, 43h, 44h, 45h, 46h
 
+; Matriz de 3 filas x 3 columnas de enteros de 16 bits (3 elementos por fila)
+; Direccion del elemento [fila][columna] = matriz + fila * 6 + columna * 2
+matriz   dw 1, 2, 3
+         dw 4, 5, 6
+         dw 7, 8, 9
+
 ; --- Codigo --------------------------------------------------------------------
 inicio:
 
@@ -125,6 +131,23 @@ modo3b_marco_bp:
     ; Liberar el marco y restaurar BP antes de continuar
     mov sp, bp                  ; SP = BP: libera las variables locales
     pop bp                      ; restaurar el BP del programa principal
+
+; === ACCESO A MATRIZ: DOBLE INDEXACION (fila, columna) ===========================
+; Elemento buscado: matriz[1][2] = 6
+; EA = base + (fila * ancho_de_fila_en_bytes) + (columna * tamano_del_elemento)
+acceso_matriz:
+    mov ax, 1                   ; AX = fila = 1
+    mov bx, 3                   ; BX = ancho de fila = 3 elementos (3 columnas)
+    mul bx                      ; AX = fila * ancho_fila = 1 * 3 = 3 (en elementos)
+    shl ax, 1                   ; AX = 3 * 2 bytes = 6 (desplazamiento de fila, en bytes)
+    mov si, ax                  ; SI = desplazamiento de fila ya calculado
+
+    mov cx, 2                   ; CX = columna = 2
+    shl cx, 1                   ; CX = 2 * 2 bytes = 4 (desplazamiento de columna, en bytes)
+    add si, cx                  ; SI = desplazamiento total = 6 + 4 = 10 = 0Ah
+
+    mov bx, matriz              ; BX = direccion base de la matriz
+    mov dx, [bx + si]           ; DX = mem[BX + SI] = matriz[1][2] = 6
 
 ; --- Fin del programa ----------------------------------------------------------
 fin_programa:

@@ -13,7 +13,7 @@
     13                                  org 100h                        ; offset de inicio para archivos .COM
     14                                  
     15                                  ; --- Datos de prueba -----------------------------------------------------------
-    16 00000000 EB22                        jmp inicio                  ; saltar sobre los datos hacia el codigo
+    16 00000000 EB34                        jmp inicio                  ; saltar sobre los datos hacia el codigo
     17                                  
     18                                  ; Array de 5 enteros de 16 bits (2 bytes por elemento, little-endian)
     19 00000002 0A0014001E00280032-     array    dw 10, 20, 30, 40, 50
@@ -31,102 +31,125 @@
     30 00000014 3031323334353637        tabla_hex db 30h, 31h, 32h, 33h, 34h, 35h, 36h, 37h
     31 0000001C 3839414243444546                  db 38h, 39h, 41h, 42h, 43h, 44h, 45h, 46h
     32                                  
-    33                                  ; --- Codigo --------------------------------------------------------------------
-    34                                  inicio:
-    35                                  
-    36                                  ; === MODO 1: INMEDIATO ==========================================================
-    37                                  ; El operando es una constante incluida en el codigo de la instruccion: no se
-    38                                  ; accede a memoria de datos. En DEBUG, U muestra el valor dentro del opcode.
-    39                                  modo1_inmediato:
-    40 00000024 B86400                      mov ax, 100                 ; AX = 100 (inmediato decimal; opcode B8 6400)
-    41 00000027 BBA500                      mov bx, 0A5h                ; BX = 0A5h (inmediato hexadecimal)
-    42 0000002A 83C137                      add cx, 55                  ; CX += 55 (inmediato en una operacion aritmetica)
-    43 0000002D 81E2FF00                    and dx, 00FFh               ; DX AND mascara inmediata
-    44                                  
-    45                                  ; === MODO 2: DIRECTO ============================================================
-    46                                  ; La direccion del operando esta fija en la instruccion (EA = 0100h + offset
-    47                                  ; del simbolo, calculada al ensamblar). Los corchetes indican acceso a memoria.
-    48                                  modo2_directo:
-    49 00000031 A1[1200]                    mov ax, [var_x]             ; AX = mem[var_x] = 0FFFFh
-    50 00000034 8B1E[0200]                  mov bx, [array]             ; BX = mem[array] = 10 (primer elemento)
-    51 00000038 8B0E[0C00]                  mov cx, [nota1]             ; CX = mem[nota1] = 85
-    52                                  
-    53                                      ; Escritura directa en memoria
-    54 0000003C C706[1200]0000              mov word [var_x], 0         ; mem[var_x] = 0
-    55                                  
-    56                                  ; === MODO 3: INDIRECTO POR REGISTRO =============================================
-    57                                  ; El registro contiene la direccion del operando; el puntero puede cambiar en
-    58                                  ; tiempo de ejecucion. EA = SI.
-    59                                  modo3_indirecto:
-    60 00000042 BE[0C00]                    mov si, nota1               ; SI = direccion de nota1 (no su valor)
-    61 00000045 8B04                        mov ax, [si]                ; AX = mem[SI] = 85
-    62                                  
-    63 00000047 BE[0E00]                    mov si, nota2               ; SI = direccion de nota2
-    64 0000004A 8B1C                        mov bx, [si]                ; BX = mem[SI] = 73
-    65                                  
-    66                                      ; Promedio calculado con punteros
-    67 0000004C 01D8                        add ax, bx                  ; AX = 85 + 73 = 158
-    68 0000004E D1E8                        shr ax, 1                   ; AX = 158 / 2 = 79
-    69 00000050 BE[1000]                    mov si, promedio            ; SI = direccion de promedio
-    70 00000053 8904                        mov [si], ax                ; mem[SI] = 79 (guarda el promedio por el puntero)
+    33                                  ; Matriz de 3 filas x 3 columnas de enteros de 16 bits (3 elementos por fila)
+    34                                  ; Direccion del elemento [fila][columna] = matriz + fila * 6 + columna * 2
+    35 00000024 010002000300            matriz   dw 1, 2, 3
+    36 0000002A 040005000600                     dw 4, 5, 6
+    37 00000030 070008000900                     dw 7, 8, 9
+    38                                  
+    39                                  ; --- Codigo --------------------------------------------------------------------
+    40                                  inicio:
+    41                                  
+    42                                  ; === MODO 1: INMEDIATO ==========================================================
+    43                                  ; El operando es una constante incluida en el codigo de la instruccion: no se
+    44                                  ; accede a memoria de datos. En DEBUG, U muestra el valor dentro del opcode.
+    45                                  modo1_inmediato:
+    46 00000036 B86400                      mov ax, 100                 ; AX = 100 (inmediato decimal; opcode B8 6400)
+    47 00000039 BBA500                      mov bx, 0A5h                ; BX = 0A5h (inmediato hexadecimal)
+    48 0000003C 83C137                      add cx, 55                  ; CX += 55 (inmediato en una operacion aritmetica)
+    49 0000003F 81E2FF00                    and dx, 00FFh               ; DX AND mascara inmediata
+    50                                  
+    51                                  ; === MODO 2: DIRECTO ============================================================
+    52                                  ; La direccion del operando esta fija en la instruccion (EA = 0100h + offset
+    53                                  ; del simbolo, calculada al ensamblar). Los corchetes indican acceso a memoria.
+    54                                  modo2_directo:
+    55 00000043 A1[1200]                    mov ax, [var_x]             ; AX = mem[var_x] = 0FFFFh
+    56 00000046 8B1E[0200]                  mov bx, [array]             ; BX = mem[array] = 10 (primer elemento)
+    57 0000004A 8B0E[0C00]                  mov cx, [nota1]             ; CX = mem[nota1] = 85
+    58                                  
+    59                                      ; Escritura directa en memoria
+    60 0000004E C706[1200]0000              mov word [var_x], 0         ; mem[var_x] = 0
+    61                                  
+    62                                  ; === MODO 3: INDIRECTO POR REGISTRO =============================================
+    63                                  ; El registro contiene la direccion del operando; el puntero puede cambiar en
+    64                                  ; tiempo de ejecucion. EA = SI.
+    65                                  modo3_indirecto:
+    66 00000054 BE[0C00]                    mov si, nota1               ; SI = direccion de nota1 (no su valor)
+    67 00000057 8B04                        mov ax, [si]                ; AX = mem[SI] = 85
+    68                                  
+    69 00000059 BE[0E00]                    mov si, nota2               ; SI = direccion de nota2
+    70 0000005C 8B1C                        mov bx, [si]                ; BX = mem[SI] = 73
     71                                  
-    72                                  ; === MODO 4: INDEXADO (BASE + INDICE + DESPLAZAMIENTO) ===========================
-    73                                  ; EA = base + indice + desplazamiento.
-    74                                  modo4_indexado:
-    75                                      ; Elemento especifico: array[2] = 30
-    76 00000055 BB[0200]                    mov bx, array               ; BX = direccion base del array
-    77 00000058 BE0400                      mov si, 4                   ; SI = indice * tamano del elemento = 2 * 2 = 4
-    78 0000005B 8B00                        mov ax, [bx + si]           ; AX = mem[BX + SI] = array[2] = 30
-    79                                  
-    80                                      ; Suma de todos los elementos del array
-    81 0000005D 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
-    82 0000005F BB[0200]                    mov bx, array               ; BX = direccion base
-    83 00000062 B90500                      mov cx, 5                   ; CX = numero de elementos
-    84 00000065 31F6                        xor si, si                  ; SI = 0 (indice en bytes)
+    72                                      ; Promedio calculado con punteros
+    73 0000005E 01D8                        add ax, bx                  ; AX = 85 + 73 = 158
+    74 00000060 D1E8                        shr ax, 1                   ; AX = 158 / 2 = 79
+    75 00000062 BE[1000]                    mov si, promedio            ; SI = direccion de promedio
+    76 00000065 8904                        mov [si], ax                ; mem[SI] = 79 (guarda el promedio por el puntero)
+    77                                  
+    78                                  ; === MODO 4: INDEXADO (BASE + INDICE + DESPLAZAMIENTO) ===========================
+    79                                  ; EA = base + indice + desplazamiento.
+    80                                  modo4_indexado:
+    81                                      ; Elemento especifico: array[2] = 30
+    82 00000067 BB[0200]                    mov bx, array               ; BX = direccion base del array
+    83 0000006A BE0400                      mov si, 4                   ; SI = indice * tamano del elemento = 2 * 2 = 4
+    84 0000006D 8B00                        mov ax, [bx + si]           ; AX = mem[BX + SI] = array[2] = 30
     85                                  
-    86                                  .bucle_array:
-    87 00000067 0300                        add ax, [bx + si]           ; AX += array[SI / 2]
-    88 00000069 83C602                      add si, 2                   ; avanzar 2 bytes (un word)
-    89 0000006C E2F9                        loop .bucle_array           ; AX = 10+20+30+40+50 = 150 = 96h al terminar
-    90                                  
-    91                                      ; Extension: recorrido inverso, de array[4] hacia array[0]
-    92                                      ; Mismo modo indexado, pero SI parte del ultimo elemento y se decrementa de 2 en 2.
-    93 0000006E 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
-    94 00000070 BB[0200]                    mov bx, array               ; BX = direccion base
-    95 00000073 B90500                      mov cx, 5                   ; CX = numero de elementos
-    96 00000076 BE0800                      mov si, 8                   ; SI = 4 * 2 = desplazamiento en bytes de array[4]
-    97                                  
-    98                                  .bucle_array_inverso:
-    99 00000079 0300                        add ax, [bx + si]           ; AX += array[SI / 2], empezando por array[4]
-   100 0000007B 83EE02                      sub si, 2                   ; retroceder 2 bytes (un word)
-   101 0000007E E2F9                        loop .bucle_array_inverso   ; AX = 50+40+30+20+10 = 150 = 96h al terminar
-   102                                  
-   103                                      ; Campos del registro con desplazamiento fijo (base + desplazamiento)
-   104 00000080 BB[0C00]                    mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
-   105 00000083 8B07                        mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
-   106 00000085 8B4F02                      mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
-   107 00000088 8B5704                      mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
+    86                                      ; Suma de todos los elementos del array
+    87 0000006F 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
+    88 00000071 BB[0200]                    mov bx, array               ; BX = direccion base
+    89 00000074 B90500                      mov cx, 5                   ; CX = numero de elementos
+    90 00000077 31F6                        xor si, si                  ; SI = 0 (indice en bytes)
+    91                                  
+    92                                  .bucle_array:
+    93 00000079 0300                        add ax, [bx + si]           ; AX += array[SI / 2]
+    94 0000007B 83C602                      add si, 2                   ; avanzar 2 bytes (un word)
+    95 0000007E E2F9                        loop .bucle_array           ; AX = 10+20+30+40+50 = 150 = 96h al terminar
+    96                                  
+    97                                      ; Extension: recorrido inverso, de array[4] hacia array[0]
+    98                                      ; Mismo modo indexado, pero SI parte del ultimo elemento y se decrementa de 2 en 2.
+    99 00000080 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
+   100 00000082 BB[0200]                    mov bx, array               ; BX = direccion base
+   101 00000085 B90500                      mov cx, 5                   ; CX = numero de elementos
+   102 00000088 BE0800                      mov si, 8                   ; SI = 4 * 2 = desplazamiento en bytes de array[4]
+   103                                  
+   104                                  .bucle_array_inverso:
+   105 0000008B 0300                        add ax, [bx + si]           ; AX += array[SI / 2], empezando por array[4]
+   106 0000008D 83EE02                      sub si, 2                   ; retroceder 2 bytes (un word)
+   107 00000090 E2F9                        loop .bucle_array_inverso   ; AX = 50+40+30+20+10 = 150 = 96h al terminar
    108                                  
-   109                                  ; === MODO 3b: INDIRECTO POR REGISTRO BP -- marco de variables locales ============
-   110                                  ; BP es el registro base convencional para datos relativos a la pila: por defecto
-   111                                  ; direcciona el segmento SS, mientras que BX/SI/DI direccionan DS. En un .COM
-   112                                  ; ambos segmentos coinciden, por lo que el resultado observable es el mismo.
-   113                                  modo3b_marco_bp:
-   114 0000008B 55                          push bp                     ; preservar el BP del programa principal
-   115 0000008C 89E5                        mov bp, sp                  ; BP = SP: define la base del nuevo marco de pila
-   116 0000008E 83EC04                      sub sp, 4                   ; reservar 4 bytes (2 palabras) para variables locales
-   117                                  
-   118                                      ; Variables locales: desplazamientos negativos respecto a BP (EA = BP + desp.)
-   119 00000091 C746FE6300                  mov word [bp - 2], 99       ; local_1 = 99  (EA = BP - 2)
-   120 00000096 C746FCFA00                  mov word [bp - 4], 250      ; local_2 = 250 (EA = BP - 4)
-   121                                  
-   122 0000009B 8B46FE                      mov ax, [bp - 2]            ; AX = mem[BP - 2] = local_1 = 99
-   123 0000009E 0346FC                      add ax, [bp - 4]            ; AX += local_2 = 99 + 250 = 349 = 015Dh
-   124                                  
-   125                                      ; Liberar el marco y restaurar BP antes de continuar
-   126 000000A1 89EC                        mov sp, bp                  ; SP = BP: libera las variables locales
-   127 000000A3 5D                          pop bp                      ; restaurar el BP del programa principal
-   128                                  
-   129                                  ; --- Fin del programa ----------------------------------------------------------
-   130                                  fin_programa:
-   131 000000A4 CD20                        int 20h                     ; retornar a DOS
+   109                                      ; Campos del registro con desplazamiento fijo (base + desplazamiento)
+   110 00000092 BB[0C00]                    mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
+   111 00000095 8B07                        mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
+   112 00000097 8B4F02                      mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
+   113 0000009A 8B5704                      mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
+   114                                  
+   115                                  ; === MODO 3b: INDIRECTO POR REGISTRO BP -- marco de variables locales ============
+   116                                  ; BP es el registro base convencional para datos relativos a la pila: por defecto
+   117                                  ; direcciona el segmento SS, mientras que BX/SI/DI direccionan DS. En un .COM
+   118                                  ; ambos segmentos coinciden, por lo que el resultado observable es el mismo.
+   119                                  modo3b_marco_bp:
+   120 0000009D 55                          push bp                     ; preservar el BP del programa principal
+   121 0000009E 89E5                        mov bp, sp                  ; BP = SP: define la base del nuevo marco de pila
+   122 000000A0 83EC04                      sub sp, 4                   ; reservar 4 bytes (2 palabras) para variables locales
+   123                                  
+   124                                      ; Variables locales: desplazamientos negativos respecto a BP (EA = BP + desp.)
+   125 000000A3 C746FE6300                  mov word [bp - 2], 99       ; local_1 = 99  (EA = BP - 2)
+   126 000000A8 C746FCFA00                  mov word [bp - 4], 250      ; local_2 = 250 (EA = BP - 4)
+   127                                  
+   128 000000AD 8B46FE                      mov ax, [bp - 2]            ; AX = mem[BP - 2] = local_1 = 99
+   129 000000B0 0346FC                      add ax, [bp - 4]            ; AX += local_2 = 99 + 250 = 349 = 015Dh
+   130                                  
+   131                                      ; Liberar el marco y restaurar BP antes de continuar
+   132 000000B3 89EC                        mov sp, bp                  ; SP = BP: libera las variables locales
+   133 000000B5 5D                          pop bp                      ; restaurar el BP del programa principal
+   134                                  
+   135                                  ; === ACCESO A MATRIZ: DOBLE INDEXACION (fila, columna) ===========================
+   136                                  ; Elemento buscado: matriz[1][2] = 6
+   137                                  ; EA = base + (fila * ancho_de_fila_en_bytes) + (columna * tamano_del_elemento)
+   138                                  acceso_matriz:
+   139 000000B6 B80100                      mov ax, 1                   ; AX = fila = 1
+   140 000000B9 BB0300                      mov bx, 3                   ; BX = ancho de fila = 3 elementos (3 columnas)
+   141 000000BC F7E3                        mul bx                      ; AX = fila * ancho_fila = 1 * 3 = 3 (en elementos)
+   142 000000BE D1E0                        shl ax, 1                   ; AX = 3 * 2 bytes = 6 (desplazamiento de fila, en bytes)
+   143 000000C0 89C6                        mov si, ax                  ; SI = desplazamiento de fila ya calculado
+   144                                  
+   145 000000C2 B90200                      mov cx, 2                   ; CX = columna = 2
+   146 000000C5 D1E1                        shl cx, 1                   ; CX = 2 * 2 bytes = 4 (desplazamiento de columna, en bytes)
+   147 000000C7 01CE                        add si, cx                  ; SI = desplazamiento total = 6 + 4 = 10 = 0Ah
+   148                                  
+   149 000000C9 BB[2400]                    mov bx, matriz              ; BX = direccion base de la matriz
+   150 000000CC 8B10                        mov dx, [bx + si]           ; DX = mem[BX + SI] = matriz[1][2] = 6
+   151                                  
+   152                                  ; --- Fin del programa ----------------------------------------------------------
+   153                                  fin_programa:
+   154 000000CE CD20                        int 20h                     ; retornar a DOS
