@@ -133,6 +133,22 @@ bloque4_control_flujo:
     loop .bucle_suma            ; CX--; si CX != 0 vuelve a .bucle_suma
                                 ; al terminar AX = 1+2+3+4+5 = 15
 
+; === BLOQUE 4b: Variante del bucle -- factorial de 5 ============================
+; Mismo esqueleto que el bucle de suma, con MUL en lugar de ADD: el acumulador
+; parte de 1 (elemento neutro del producto) y se multiplica por BX = 1, 2, 3, 4, 5.
+bloque4b_factorial:
+    mov ax, 1                   ; AX = 1 (acumulador del producto)
+    mov cl, [contador]          ; CL = 5
+    xor ch, ch                  ; CX = 5: contador del bucle
+    mov bx, 1                   ; BX = factor actual
+
+.bucle_factorial:
+    mul bx                      ; DX:AX = AX * BX (DX = 0 mientras el producto cabe en 16 bits)
+    inc bx                      ; BX++ (siguiente factor)
+    loop .bucle_factorial       ; CX--; si CX != 0 vuelve a .bucle_factorial
+                                ; al terminar AX = 1*1*2*3*4*5 = 120 = 78h
+    mov [resultado], ax         ; guarda 5! en memoria
+
 ; --- Fin del programa ----------------------------------------------------------
 fin_programa:
     int 20h                     ; retornar a DOS

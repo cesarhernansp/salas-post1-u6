@@ -133,6 +133,22 @@
    133 00000087 E2FB                        loop .bucle_suma            ; CX--; si CX != 0 vuelve a .bucle_suma
    134                                                                  ; al terminar AX = 1+2+3+4+5 = 15
    135                                  
-   136                                  ; --- Fin del programa ----------------------------------------------------------
-   137                                  fin_programa:
-   138 00000089 CD20                        int 20h                     ; retornar a DOS
+   136                                  ; === BLOQUE 4b: Variante del bucle -- factorial de 5 ============================
+   137                                  ; Mismo esqueleto que el bucle de suma, con MUL en lugar de ADD: el acumulador
+   138                                  ; parte de 1 (elemento neutro del producto) y se multiplica por BX = 1, 2, 3, 4, 5.
+   139                                  bloque4b_factorial:
+   140 00000089 B80100                      mov ax, 1                   ; AX = 1 (acumulador del producto)
+   141 0000008C 8A0E[0800]                  mov cl, [contador]          ; CL = 5
+   142 00000090 30ED                        xor ch, ch                  ; CX = 5: contador del bucle
+   143 00000092 BB0100                      mov bx, 1                   ; BX = factor actual
+   144                                  
+   145                                  .bucle_factorial:
+   146 00000095 F7E3                        mul bx                      ; DX:AX = AX * BX (DX = 0 mientras el producto cabe en 16 bits)
+   147 00000097 43                          inc bx                      ; BX++ (siguiente factor)
+   148 00000098 E2FB                        loop .bucle_factorial       ; CX--; si CX != 0 vuelve a .bucle_factorial
+   149                                                                  ; al terminar AX = 1*1*2*3*4*5 = 120 = 78h
+   150 0000009A A3[0600]                    mov [resultado], ax         ; guarda 5! en memoria
+   151                                  
+   152                                  ; --- Fin del programa ----------------------------------------------------------
+   153                                  fin_programa:
+   154 0000009D CD20                        int 20h                     ; retornar a DOS
