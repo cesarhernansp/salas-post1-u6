@@ -1,0 +1,100 @@
+     1                                  ; lab6_modos.asm -- Demostracion de modos de direccionamiento x86
+     2                                  ; Compilar: nasm -f bin lab6_modos.asm -o lab6_modos.com
+     3                                  ;
+     4                                  ; Programa .COM (org 100h). Crea un array de 5 enteros de 16 bits y un registro de
+     5                                  ; 3 campos, y los accede con modos de direccionamiento distintos. El objetivo no es
+     6                                  ; el resultado del calculo sino que cada modo produzca una direccion efectiva (EA)
+     7                                  ; verificable con DEBUG:
+     8                                  ;   inmediato  : el operando va dentro de la instruccion
+     9                                  ;   directo    : EA = desplazamiento fijo en la instruccion
+    10                                  ;   indirecto  : EA = registro (BX, SI, DI o BP)
+    11                                  ;   indexado   : EA = base + indice + desplazamiento
+    12                                  
+    13                                  org 100h                        ; offset de inicio para archivos .COM
+    14                                  
+    15                                  ; --- Datos de prueba -----------------------------------------------------------
+    16 00000000 EB22                        jmp inicio                  ; saltar sobre los datos hacia el codigo
+    17                                  
+    18                                  ; Array de 5 enteros de 16 bits (2 bytes por elemento, little-endian)
+    19 00000002 0A0014001E00280032-     array    dw 10, 20, 30, 40, 50
+    19 0000000B 00                 
+    20                                  
+    21                                  ; Registro de estudiante: nota1 (16 bits) + nota2 (16 bits) + promedio (16 bits)
+    22 0000000C 5500                    nota1    dw 85                  ; offset 0 del registro
+    23 0000000E 4900                    nota2    dw 73                  ; offset 2
+    24 00000010 0000                    promedio dw 0                   ; offset 4
+    25                                  
+    26                                  ; Variable simple para el direccionamiento directo
+    27 00000012 FFFF                    var_x    dw 0FFFFh
+    28                                  
+    29                                  ; Tabla de bytes (digitos hexadecimales en ASCII)
+    30 00000014 3031323334353637        tabla_hex db 30h, 31h, 32h, 33h, 34h, 35h, 36h, 37h
+    31 0000001C 3839414243444546                  db 38h, 39h, 41h, 42h, 43h, 44h, 45h, 46h
+    32                                  
+    33                                  ; --- Codigo --------------------------------------------------------------------
+    34                                  inicio:
+    35                                  
+    36                                  ; === MODO 1: INMEDIATO ==========================================================
+    37                                  ; El operando es una constante incluida en el codigo de la instruccion: no se
+    38                                  ; accede a memoria de datos. En DEBUG, U muestra el valor dentro del opcode.
+    39                                  modo1_inmediato:
+    40 00000024 B86400                      mov ax, 100                 ; AX = 100 (inmediato decimal; opcode B8 6400)
+    41 00000027 BBA500                      mov bx, 0A5h                ; BX = 0A5h (inmediato hexadecimal)
+    42 0000002A 83C137                      add cx, 55                  ; CX += 55 (inmediato en una operacion aritmetica)
+    43 0000002D 81E2FF00                    and dx, 00FFh               ; DX AND mascara inmediata
+    44                                  
+    45                                  ; === MODO 2: DIRECTO ============================================================
+    46                                  ; La direccion del operando esta fija en la instruccion (EA = 0100h + offset
+    47                                  ; del simbolo, calculada al ensamblar). Los corchetes indican acceso a memoria.
+    48                                  modo2_directo:
+    49 00000031 A1[1200]                    mov ax, [var_x]             ; AX = mem[var_x] = 0FFFFh
+    50 00000034 8B1E[0200]                  mov bx, [array]             ; BX = mem[array] = 10 (primer elemento)
+    51 00000038 8B0E[0C00]                  mov cx, [nota1]             ; CX = mem[nota1] = 85
+    52                                  
+    53                                      ; Escritura directa en memoria
+    54 0000003C C706[1200]0000              mov word [var_x], 0         ; mem[var_x] = 0
+    55                                  
+    56                                  ; === MODO 3: INDIRECTO POR REGISTRO =============================================
+    57                                  ; El registro contiene la direccion del operando; el puntero puede cambiar en
+    58                                  ; tiempo de ejecucion. EA = SI.
+    59                                  modo3_indirecto:
+    60 00000042 BE[0C00]                    mov si, nota1               ; SI = direccion de nota1 (no su valor)
+    61 00000045 8B04                        mov ax, [si]                ; AX = mem[SI] = 85
+    62                                  
+    63 00000047 BE[0E00]                    mov si, nota2               ; SI = direccion de nota2
+    64 0000004A 8B1C                        mov bx, [si]                ; BX = mem[SI] = 73
+    65                                  
+    66                                      ; Promedio calculado con punteros
+    67 0000004C 01D8                        add ax, bx                  ; AX = 85 + 73 = 158
+    68 0000004E D1E8                        shr ax, 1                   ; AX = 158 / 2 = 79
+    69 00000050 BE[1000]                    mov si, promedio            ; SI = direccion de promedio
+    70 00000053 8904                        mov [si], ax                ; mem[SI] = 79 (guarda el promedio por el puntero)
+    71                                  
+    72                                  ; === MODO 4: INDEXADO (BASE + INDICE + DESPLAZAMIENTO) ===========================
+    73                                  ; EA = base + indice + desplazamiento.
+    74                                  modo4_indexado:
+    75                                      ; Elemento especifico: array[2] = 30
+    76 00000055 BB[0200]                    mov bx, array               ; BX = direccion base del array
+    77 00000058 BE0400                      mov si, 4                   ; SI = indice * tamano del elemento = 2 * 2 = 4
+    78 0000005B 8B00                        mov ax, [bx + si]           ; AX = mem[BX + SI] = array[2] = 30
+    79                                  
+    80                                      ; Suma de todos los elementos del array
+    81 0000005D 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
+    82 0000005F BB[0200]                    mov bx, array               ; BX = direccion base
+    83 00000062 B90500                      mov cx, 5                   ; CX = numero de elementos
+    84 00000065 31F6                        xor si, si                  ; SI = 0 (indice en bytes)
+    85                                  
+    86                                  .bucle_array:
+    87 00000067 0300                        add ax, [bx + si]           ; AX += array[SI / 2]
+    88 00000069 83C602                      add si, 2                   ; avanzar 2 bytes (un word)
+    89 0000006C E2F9                        loop .bucle_array           ; AX = 10+20+30+40+50 = 150 = 96h al terminar
+    90                                  
+    91                                      ; Campos del registro con desplazamiento fijo (base + desplazamiento)
+    92 0000006E BB[0C00]                    mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
+    93 00000071 8B07                        mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
+    94 00000073 8B4F02                      mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
+    95 00000076 8B5704                      mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
+    96                                  
+    97                                  ; --- Fin del programa ----------------------------------------------------------
+    98                                  fin_programa:
+    99 00000079 CD20                        int 20h                     ; retornar a DOS
