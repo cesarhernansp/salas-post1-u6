@@ -89,12 +89,24 @@
     88 00000069 83C602                      add si, 2                   ; avanzar 2 bytes (un word)
     89 0000006C E2F9                        loop .bucle_array           ; AX = 10+20+30+40+50 = 150 = 96h al terminar
     90                                  
-    91                                      ; Campos del registro con desplazamiento fijo (base + desplazamiento)
-    92 0000006E BB[0C00]                    mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
-    93 00000071 8B07                        mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
-    94 00000073 8B4F02                      mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
-    95 00000076 8B5704                      mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
-    96                                  
-    97                                  ; --- Fin del programa ----------------------------------------------------------
-    98                                  fin_programa:
-    99 00000079 CD20                        int 20h                     ; retornar a DOS
+    91                                      ; Extension: recorrido inverso, de array[4] hacia array[0]
+    92                                      ; Mismo modo indexado, pero SI parte del ultimo elemento y se decrementa de 2 en 2.
+    93 0000006E 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
+    94 00000070 BB[0200]                    mov bx, array               ; BX = direccion base
+    95 00000073 B90500                      mov cx, 5                   ; CX = numero de elementos
+    96 00000076 BE0800                      mov si, 8                   ; SI = 4 * 2 = desplazamiento en bytes de array[4]
+    97                                  
+    98                                  .bucle_array_inverso:
+    99 00000079 0300                        add ax, [bx + si]           ; AX += array[SI / 2], empezando por array[4]
+   100 0000007B 83EE02                      sub si, 2                   ; retroceder 2 bytes (un word)
+   101 0000007E E2F9                        loop .bucle_array_inverso   ; AX = 50+40+30+20+10 = 150 = 96h al terminar
+   102                                  
+   103                                      ; Campos del registro con desplazamiento fijo (base + desplazamiento)
+   104 00000080 BB[0C00]                    mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
+   105 00000083 8B07                        mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
+   106 00000085 8B4F02                      mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
+   107 00000088 8B5704                      mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
+   108                                  
+   109                                  ; --- Fin del programa ----------------------------------------------------------
+   110                                  fin_programa:
+   111 0000008B CD20                        int 20h                     ; retornar a DOS

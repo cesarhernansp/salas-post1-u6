@@ -88,6 +88,18 @@ modo4_indexado:
     add si, 2                   ; avanzar 2 bytes (un word)
     loop .bucle_array           ; AX = 10+20+30+40+50 = 150 = 96h al terminar
 
+    ; Extension: recorrido inverso, de array[4] hacia array[0]
+    ; Mismo modo indexado, pero SI parte del ultimo elemento y se decrementa de 2 en 2.
+    xor ax, ax                  ; AX = 0 (acumulador)
+    mov bx, array               ; BX = direccion base
+    mov cx, 5                   ; CX = numero de elementos
+    mov si, 8                   ; SI = 4 * 2 = desplazamiento en bytes de array[4]
+
+.bucle_array_inverso:
+    add ax, [bx + si]           ; AX += array[SI / 2], empezando por array[4]
+    sub si, 2                   ; retroceder 2 bytes (un word)
+    loop .bucle_array_inverso   ; AX = 50+40+30+20+10 = 150 = 96h al terminar
+
     ; Campos del registro con desplazamiento fijo (base + desplazamiento)
     mov bx, nota1               ; BX = base del registro (nota1, nota2, promedio)
     mov ax, [bx]                ; AX = nota1 = 85 (offset 0)
