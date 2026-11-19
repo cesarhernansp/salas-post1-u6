@@ -1,0 +1,138 @@
+     1                                  ; lab6_instrucciones.asm -- Demostracion de las categorias de instrucciones x86
+     2                                  ; Compilar: nasm -f bin lab6_instrucciones.asm -o lab6_instrucciones.com
+     3                                  ;
+     4                                  ; Programa .COM: un unico segmento de 64 KB (CS = DS = ES = SS) que DOS carga en
+     5                                  ; el desplazamiento 0100h, despues de los 256 bytes del PSP. El programa recorre
+     6                                  ; cuatro categorias de instrucciones en bloques consecutivos y termina con INT 20h.
+     7                                  
+     8                                  org 100h                        ; offset de inicio para archivos .COM
+     9                                  
+    10                                  ; --- Datos ---------------------------------------------------------------------
+    11                                  ; Los datos van al principio del archivo; el primer salto los evita para que la
+    12                                  ; ejecucion empiece en el codigo.
+    13 00000000 EB08                        jmp inicio                  ; saltar sobre los datos hacia el codigo
+    14                                  
+    15 00000002 2D00                    valor_a   dw 45                 ; primer operando
+    16 00000004 0C00                    valor_b   dw 12                 ; segundo operando
+    17 00000006 0000                    resultado dw 0                  ; almacena un resultado
+    18 00000008 05                      contador  db 5                  ; numero de iteraciones de los bucles
+    19 00000009 0F                      mascara   db 0Fh                ; mascara de los 4 bits bajos
+    20                                  
+    21                                  ; --- Codigo --------------------------------------------------------------------
+    22                                  inicio:
+    23                                  
+    24                                  ; === BLOQUE 1: Transferencia de datos ===========================================
+    25                                  bloque1_transferencia:
+    26                                      ; MOV carga el contenido de memoria en un registro
+    27 0000000A A1[0200]                    mov ax, [valor_a]           ; AX = 45 (contenido de valor_a)
+    28 0000000D 8B1E[0400]                  mov bx, [valor_b]           ; BX = 12 (contenido de valor_b)
+    29                                  
+    30                                      ; MOV entre registros
+    31 00000011 89C1                        mov cx, ax                  ; CX = AX = 45
+    32 00000013 89DA                        mov dx, bx                  ; DX = BX = 12
+    33                                  
+    34                                      ; LEA carga la direccion, no el contenido
+    35 00000015 8D36[0200]                  lea si, [valor_a]           ; SI = direccion de valor_a (no su valor)
+    36 00000019 8B04                        mov ax, [si]                ; AX = mem[SI] = 45 (acceso indirecto por SI)
+    37                                  
+    38                                      ; XCHG intercambia dos registros
+    39 0000001B 87CA                        xchg cx, dx                 ; CX = 12, DX = 45
+    40 0000001D 87CA                        xchg cx, dx                 ; se restaura: CX = 45, DX = 12
+    41                                  
+    42                                      ; PUSH/POP preservan y restauran un registro
+    43 0000001F 50                          push ax                     ; guarda AX = 45 en la pila
+    44 00000020 B8FFFF                      mov ax, 0FFFFh              ; modifica AX temporalmente
+    45 00000023 58                          pop ax                      ; restaura AX = 45
+    46                                  
+    47                                  ; === BLOQUE 2: Operaciones aritmeticas ==========================================
+    48                                  bloque2_aritmetica:
+    49                                      ; ADD: suma con actualizacion de flags
+    50 00000024 A1[0200]                    mov ax, [valor_a]           ; AX = 45
+    51 00000027 0306[0400]                  add ax, [valor_b]           ; AX = 45 + 12 = 57 (ZF=0, CF=0, OF=0)
+    52 0000002B A3[0600]                    mov [resultado], ax         ; guarda 57 en memoria
+    53                                  
+    54                                      ; SUB: resta; el resultado negativo activa SF y el prestamo activa CF
+    55 0000002E A1[0400]                    mov ax, [valor_b]           ; AX = 12
+    56 00000031 2B06[0200]                  sub ax, [valor_a]           ; AX = 12 - 45 = -33 = 0FFDFh (SF=1, CF=1, OF=0)
+    57                                  
+    58                                      ; INC y DEC: incremento y decremento (no modifican CF)
+    59 00000035 A1[0200]                    mov ax, [valor_a]           ; AX = 45
+    60 00000038 40                          inc ax                      ; AX = 46
+    61 00000039 48                          dec ax                      ; AX = 45
+    62                                  
+    63                                      ; MUL: multiplicacion sin signo, AX = AL * operando
+    64 0000003A B00A                        mov al, 10                  ; AL = 10
+    65 0000003C B307                        mov bl, 7                   ; BL = 7
+    66 0000003E F6E3                        mul bl                      ; AX = AL * BL = 70
+    67                                  
+    68                                      ; DIV: division sin signo, AL = cociente y AH = resto
+    69 00000040 B86400                      mov ax, 100                 ; AX = 100
+    70 00000043 B307                        mov bl, 7                   ; BL = 7
+    71 00000045 F6F3                        div bl                      ; AL = 14, AH = 2 (100 = 7 * 14 + 2)
+    72                                  
+    73                                  ; === BLOQUE 3: Operaciones logicas ==============================================
+    74                                  bloque3_logica:
+    75 00000047 B0B7                        mov al, 0B7h                ; AL = 1011 0111b = 0B7h
+    76                                  
+    77                                      ; AND: mascara de limpieza, conserva solo los 4 bits bajos
+    78 00000049 2206[0900]                  and al, [mascara]           ; AL = 0B7h AND 0Fh = 0111b = 07h
+    79                                  
+    80 0000004D B0B7                        mov al, 0B7h                ; se restaura AL
+    81                                  
+    82                                      ; OR: activa bits; aqui activa los 4 bits altos
+    83 0000004F 0CF0                        or al, 0F0h                 ; AL = 0B7h OR 0F0h = 1111 0111b = 0F7h
+    84                                  
+    85 00000051 B0AA                        mov al, 0AAh                ; AL = 1010 1010b
+    86                                  
+    87                                      ; XOR con 0FFh: inversion de todos los bits
+    88 00000053 34FF                        xor al, 0FFh                ; AL = NOT AL = 0101 0101b = 55h
+    89                                  
+    90                                      ; XOR reg, reg: forma estandar de poner a cero un registro
+    91 00000055 31DB                        xor bx, bx                  ; BX = 0 (mas corta que MOV BX, 0)
+    92                                  
+    93                                      ; TEST: AND que no guarda el resultado, solo actualiza flags
+    94 00000057 B0B7                        mov al, 0B7h
+    95 00000059 A801                        test al, 01h                ; ZF = 0 si el bit 0 vale 1 (numero impar)
+    96                                                                  ; AL sigue valiendo 0B7h
+    97                                  
+    98                                      ; SHL/SHR: desplazamiento = multiplicar / dividir por 2
+    99 0000005B B008                        mov al, 08h                 ; AL = 8
+   100 0000005D C0E002                      shl al, 2                   ; AL = 8 << 2 = 32 = 20h
+   101 00000060 D0E8                        shr al, 1                   ; AL = 32 >> 1 = 16 = 10h
+   102                                  
+   103                                  ; === BLOQUE 4: Control de flujo =================================================
+   104                                  bloque4_control_flujo:
+   105                                      ; Estructura if/else: comparar valor_a con valor_b
+   106 00000062 A1[0200]                    mov ax, [valor_a]           ; AX = 45
+   107 00000065 3B06[0400]                  cmp ax, [valor_b]           ; AX - valor_b = 45 - 12 = 33 > 0
+   108 00000069 7F06                        jg .mayor                   ; salta si AX > valor_b (con signo)
+   109 0000006B 7409                        je .igual                   ; salta si AX == valor_b
+   110                                  
+   111                                      ; caso AX < valor_b (no se alcanza con estos datos)
+   112 0000006D 31C9                        xor cx, cx                  ; CX = 0 como indicador
+   113 0000006F EB08                        jmp .fin_comparacion
+   114                                  
+   115                                  .mayor:
+   116 00000071 B90100                      mov cx, 1                   ; CX = 1: indica valor_a > valor_b
+   117 00000074 EB03                        jmp .fin_comparacion
+   118                                  
+   119                                  .igual:
+   120 00000076 B90200                      mov cx, 2                   ; CX = 2: indica igualdad
+   121                                  
+   122                                  .fin_comparacion:
+   123                                  
+   124                                      ; Bucle contado: suma acumulada de 1 a 5 (resultado esperado: 15)
+   125 00000079 31C0                        xor ax, ax                  ; AX = 0 (acumulador)
+   126 0000007B 8A0E[0800]                  mov cl, [contador]          ; CL = 5 (numero de iteraciones)
+   127 0000007F 30ED                        xor ch, ch                  ; CX = 5: contador del bucle
+   128 00000081 BB0100                      mov bx, 1                   ; BX = siguiente valor a sumar
+   129                                  
+   130                                  .bucle_suma:
+   131 00000084 01D8                        add ax, bx                  ; AX += BX
+   132 00000086 43                          inc bx                      ; BX++ (siguiente valor)
+   133 00000087 E2FB                        loop .bucle_suma            ; CX--; si CX != 0 vuelve a .bucle_suma
+   134                                                                  ; al terminar AX = 1+2+3+4+5 = 15
+   135                                  
+   136                                  ; --- Fin del programa ----------------------------------------------------------
+   137                                  fin_programa:
+   138 00000089 CD20                        int 20h                     ; retornar a DOS
