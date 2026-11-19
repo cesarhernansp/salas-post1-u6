@@ -149,6 +149,34 @@
    149                                                                  ; al terminar AX = 1*1*2*3*4*5 = 120 = 78h
    150 0000009A A3[0600]                    mov [resultado], ax         ; guarda 5! en memoria
    151                                  
-   152                                  ; --- Fin del programa ----------------------------------------------------------
-   153                                  fin_programa:
-   154 0000009D CD20                        int 20h                     ; retornar a DOS
+   152                                  ; === BLOQUE 5: Rotacion -- ROL/ROR frente a SHL/SHR ==============================
+   153                                  ; SHL/SHR descartan el bit que sale del registro (solo queda en CF). ROL/ROR
+   154                                  ; reinsertan ese bit por el extremo opuesto, de modo que no se pierde ninguno.
+   155                                  ; Las cuatro instrucciones se aplican al mismo valor de entrada para compararlas.
+   156                                  bloque5_rotacion:
+   157 0000009D B081                        mov al, 81h                 ; AL = 1000 0001b: bits 7 y 0 en 1, para que
+   158                                                                  ; ambos extremos del registro se vean afectados
+   159                                  
+   160                                      ; SHL: el bit que sale por la izquierda se pierde (solo queda en CF)
+   161 0000009F 88C3                        mov bl, al                  ; se conserva el valor original en BL
+   162 000000A1 D0E3                        shl bl, 1                   ; BL = 0000 0010b = 02h; CF = 1 (bit 7 original)
+   163                                  
+   164                                      ; ROL: el bit que sale por la izquierda se reinserta por la derecha
+   165 000000A3 88C1                        mov cl, al                  ; se conserva el valor original en CL
+   166 000000A5 D0C1                        rol cl, 1                   ; CL = 0000 0011b = 03h; CF = 1, y ese bit queda en el bit 0
+   167                                  
+   168                                      ; El mismo contraste por el extremo derecho
+   169 000000A7 88C2                        mov dl, al                  ; DL = AL = 1000 0001b
+   170 000000A9 D0EA                        shr dl, 1                   ; DL = 0100 0000b = 40h; CF = 1 (bit 0 original perdido)
+   171                                  
+   172 000000AB 88C7                        mov bh, al                  ; BH = AL = 1000 0001b
+   173 000000AD D0CF                        ror bh, 1                   ; BH = 1100 0000b = 0C0h; CF = 1, y ese bit pasa a ser el bit 7
+   174                                  
+   175                                      ; Uso practico de ROL: intercambiar los nibbles de un byte (alto <-> bajo)
+   176 000000AF B0A5                        mov al, 0A5h                ; AL = 1010 0101b (nibble alto = A, nibble bajo = 5)
+   177 000000B1 C0C004                      rol al, 4                   ; AL = 0101 1010b = 5Ah: nibbles intercambiados;
+   178                                                                  ; SHL no puede lograrlo porque descartaria el nibble alto
+   179                                  
+   180                                  ; --- Fin del programa ----------------------------------------------------------
+   181                                  fin_programa:
+   182 000000B4 CD20                        int 20h                     ; retornar a DOS

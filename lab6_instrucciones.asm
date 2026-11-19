@@ -149,6 +149,34 @@ bloque4b_factorial:
                                 ; al terminar AX = 1*1*2*3*4*5 = 120 = 78h
     mov [resultado], ax         ; guarda 5! en memoria
 
+; === BLOQUE 5: Rotacion -- ROL/ROR frente a SHL/SHR ==============================
+; SHL/SHR descartan el bit que sale del registro (solo queda en CF). ROL/ROR
+; reinsertan ese bit por el extremo opuesto, de modo que no se pierde ninguno.
+; Las cuatro instrucciones se aplican al mismo valor de entrada para compararlas.
+bloque5_rotacion:
+    mov al, 81h                 ; AL = 1000 0001b: bits 7 y 0 en 1, para que
+                                ; ambos extremos del registro se vean afectados
+
+    ; SHL: el bit que sale por la izquierda se pierde (solo queda en CF)
+    mov bl, al                  ; se conserva el valor original en BL
+    shl bl, 1                   ; BL = 0000 0010b = 02h; CF = 1 (bit 7 original)
+
+    ; ROL: el bit que sale por la izquierda se reinserta por la derecha
+    mov cl, al                  ; se conserva el valor original en CL
+    rol cl, 1                   ; CL = 0000 0011b = 03h; CF = 1, y ese bit queda en el bit 0
+
+    ; El mismo contraste por el extremo derecho
+    mov dl, al                  ; DL = AL = 1000 0001b
+    shr dl, 1                   ; DL = 0100 0000b = 40h; CF = 1 (bit 0 original perdido)
+
+    mov bh, al                  ; BH = AL = 1000 0001b
+    ror bh, 1                   ; BH = 1100 0000b = 0C0h; CF = 1, y ese bit pasa a ser el bit 7
+
+    ; Uso practico de ROL: intercambiar los nibbles de un byte (alto <-> bajo)
+    mov al, 0A5h                ; AL = 1010 0101b (nibble alto = A, nibble bajo = 5)
+    rol al, 4                   ; AL = 0101 1010b = 5Ah: nibbles intercambiados;
+                                ; SHL no puede lograrlo porque descartaria el nibble alto
+
 ; --- Fin del programa ----------------------------------------------------------
 fin_programa:
     int 20h                     ; retornar a DOS
