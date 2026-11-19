@@ -106,6 +106,26 @@ modo4_indexado:
     mov cx, [bx + 2]            ; CX = nota2 = 73 (offset 2)
     mov dx, [bx + 4]            ; DX = promedio = 79 (offset 4)
 
+; === MODO 3b: INDIRECTO POR REGISTRO BP -- marco de variables locales ============
+; BP es el registro base convencional para datos relativos a la pila: por defecto
+; direcciona el segmento SS, mientras que BX/SI/DI direccionan DS. En un .COM
+; ambos segmentos coinciden, por lo que el resultado observable es el mismo.
+modo3b_marco_bp:
+    push bp                     ; preservar el BP del programa principal
+    mov bp, sp                  ; BP = SP: define la base del nuevo marco de pila
+    sub sp, 4                   ; reservar 4 bytes (2 palabras) para variables locales
+
+    ; Variables locales: desplazamientos negativos respecto a BP (EA = BP + desp.)
+    mov word [bp - 2], 99       ; local_1 = 99  (EA = BP - 2)
+    mov word [bp - 4], 250      ; local_2 = 250 (EA = BP - 4)
+
+    mov ax, [bp - 2]            ; AX = mem[BP - 2] = local_1 = 99
+    add ax, [bp - 4]            ; AX += local_2 = 99 + 250 = 349 = 015Dh
+
+    ; Liberar el marco y restaurar BP antes de continuar
+    mov sp, bp                  ; SP = BP: libera las variables locales
+    pop bp                      ; restaurar el BP del programa principal
+
 ; --- Fin del programa ----------------------------------------------------------
 fin_programa:
     int 20h                     ; retornar a DOS
